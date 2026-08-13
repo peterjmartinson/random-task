@@ -1,0 +1,37 @@
+{
+  "name": "screamsheet-morning-aggregator",
+  "version": "1.0.0",
+  "description": "CLI utility to scrape, aggregate, and normalize daily schedules and tasks into unified Screamsheet JSON agenda",
+  "main": "dist/index.js",
+  "bin": {
+    "screamsheet-aggregator": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/cli.ts",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "screamsheet",
+    "aggregator",
+    "trello",
+    "google-calendar",
+    "cli"
+  ],
+  "author": "Peter Martinson",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "commander": "^13.1.0",
+    "date-fns": "^4.1.0",
+    "fast-levenshtein": "^3.0.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/fast-levenshtein": "^0.0.4",
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.2",
+    "vitest": "^3.0.5"
+  }
+}

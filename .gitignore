@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node.js & Screamsheet Aggregator
+node_modules/
+dist/
+*.tsbuildinfo
+config.json
+agenda-*.json
+.env
+.env.local
+
