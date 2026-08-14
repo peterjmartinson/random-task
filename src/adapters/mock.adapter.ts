@@ -22,7 +22,7 @@ export class MockAdapter implements SourceAdapter {
         },
         priority: 'high',
         status: 'pending',
-        description: 'Sync regarding Screamsheet print pipeline. Call Sarah at (555) 012-3456.',
+        description: 'Sync regarding sprint pipeline. Call Sarah at (555) 012-3456.',
         metadata: {
           phone: '(555) 012-3456',
         },
@@ -49,7 +49,7 @@ export class MockAdapter implements SourceAdapter {
         id: 'tsk-101',
         source: 'trello',
         type: 'task',
-        title: 'Review pull requests for screamsheet repository',
+        title: 'Review pull requests for core repository',
         url: 'https://trello.com/c/card-uuid-1',
         priority: 'high',
         status: 'pending',

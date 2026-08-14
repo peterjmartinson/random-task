@@ -1,6 +1,6 @@
 {
   "max_tasks": 5,
-  "output_directory": "C:/Users/Admin/Documents/screamsheet/incoming",
+  "output_directory": "./output",
   "default_start_location": "123 Home St, Anytown, USA",
   "google_calendar": {
     "api_key": "YOUR_GOOGLE_CALENDAR_API_KEY",

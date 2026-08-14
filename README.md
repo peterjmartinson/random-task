@@ -1,12 +1,12 @@
-# Screamsheet Morning Aggregator
+# Daily Agenda Aggregator
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A CLI utility designed to scrape, aggregate, deduplicate, and normalize daily schedules and task items from multiple digital sources (**Google Calendar**, **Trello**, etc.) into a unified daily agenda JSON output (`agenda-YYYY-MM-DD.json`).
+A CLI utility designed to scrape, aggregate, deduplicate, and normalize daily schedules and task items from multiple digital sources (**Google Calendar**, **Trello**, etc.) into a unified daily agenda JSON artifact (`agenda-YYYY-MM-DD.json`).
 
-This output file is fed directly into the **Screamsheet** printing pipeline, which renders and physically prints your daily briefing every morning.
+This structured JSON artifact can be consumed by daily briefings, dashboards, automated print pipelines, or downstream client applications.
 
 ---
 
@@ -36,7 +36,7 @@ npx tsx src/cli.ts --mock --dry-run
 * 🚗 **Maps & Drive Time Enrichment**: Calculates travel duration using Google Maps Distance Matrix API, tracks starting base location shifts (`Start: Office`), and computes "Leave by" timestamps.
 * 📞 **Contact Info Extraction**: Automatically extracts phone numbers and email addresses from descriptions and locations into item accessories.
 * 🎯 **Prioritization & Task Limits**: Ranks tasks by priority (`high` > `medium` > `low`), surfaces past-due items first, and caps total tasks to your configured `max_tasks` limit.
-* 📜 **Spec-Compliant JSON Output**: Emits clean `agenda-YYYY-MM-DD.json` ready for consumption by Screamsheet or downstream tools.
+* 📜 **Spec-Compliant JSON Output**: Emits clean `agenda-YYYY-MM-DD.json` ready for consumption by downstream tools and services.
 
 ---
 
@@ -55,7 +55,7 @@ graph TD
     Prioritize --> Format[6. Schema Generation]
     
     Format --> Output[agenda-YYYY-MM-DD.json]
-    Output --> Screamsheet[Screamsheet PDF Print Pipeline]
+    Output --> Downstream[Downstream Consumers & Applications]
 ```
 
 ---
@@ -72,7 +72,7 @@ cp config.json.example config.json
 ```json
 {
   "max_tasks": 5,
-  "output_directory": "C:/Users/Admin/Documents/screamsheet/incoming",
+  "output_directory": "./output",
   "default_start_location": "123 Home St, Anytown, USA",
   "google_calendar": {
     "api_key": "YOUR_GOOGLE_CALENDAR_API_KEY",
@@ -104,7 +104,7 @@ cp config.json.example config.json
 ## 🖥️ CLI Usage
 
 ```bash
-screamsheet-aggregator [options]
+agenda-aggregator [options]
 ```
 
 ### Options

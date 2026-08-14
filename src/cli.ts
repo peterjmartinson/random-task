@@ -9,8 +9,8 @@ import { runPipeline } from './pipeline/index.js';
 const program = new Command();
 
 program
-  .name('screamsheet-aggregator')
-  .description('Aggregates Google Calendar and Trello items into unified Screamsheet daily agenda JSON')
+  .name('agenda-aggregator')
+  .description('Aggregates Google Calendar and Trello items into unified daily agenda JSON')
   .version('1.0.0')
   .option('-c, --config <path>', 'Path to config.json file', 'config.json')
   .option('-d, --date <YYYY-MM-DD>', 'Target date for agenda (defaults to today)')

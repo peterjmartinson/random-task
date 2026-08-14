@@ -1,9 +1,9 @@
-# Screamsheet Morning Aggregator: Specification
+# Daily Agenda Aggregator: Specification
 
 ## 1. Overview
-The **Screamsheet Morning Aggregator** is a CLI utility or background service designed to scrape, aggregate, and normalize daily schedules, tasks, and contextual updates from multiple digital sources. 
+The **Daily Agenda Aggregator** is a CLI utility or background service designed to scrape, aggregate, and normalize daily schedules, tasks, and contextual updates from multiple digital sources. 
 
-Its primary objective is to produce a single, highly structured, unified **"Daily Agenda" file (JSON)**. This output file is consumed by the **Screamsheet Project**, which formats and physically prints the agenda every morning.
+Its primary objective is to produce a single, highly structured, unified **"Daily Agenda" file (JSON)**. This structured JSON artifact serves as a universal data interchange format for downstream services, printing pipelines, or client applications.
 
 ```mermaid
 graph TD
@@ -18,7 +18,7 @@ graph TD
     Prioritize --> Schema[F. Schema Generation JSON]
     Schema --> Run[G. Execution & Transport]
     
-    Run --> Screamsheet[Screamsheet Print Pipeline]
+    Run --> Downstream[Downstream Consumers & Applications]
 ```
 
 ---
@@ -31,7 +31,7 @@ To control behavior dynamically without changing the code, a configuration file 
 ```json
 {
   "max_tasks": 5,
-  "output_directory": "C:/Users/Admin/Documents/screamsheet/incoming",
+  "output_directory": "./output",
   "default_start_location": "123 Home St, Anytown, USA",
   "google_calendar": {
     "calendar_ids": ["primary", "family"]
@@ -147,7 +147,7 @@ The output format is **JSON**.
   "tasks": [
     {
       "id": "tsk-101",
-      "title": "Review pull requests for screamsheet repository",
+      "title": "Review pull requests for core repository",
       "priority": "high",
       "url": "https://trello.com/c/card-uuid-1",
       "subtasks": [
@@ -170,6 +170,6 @@ The output format is **JSON**.
 *   **Trigger**: A daily cron job runs at `05:30 AM` local time.
 *   **File Naming**: Output a JSON file named `agenda-YYYY-MM-DD.json` (e.g., `agenda-2026-08-12.json`).
 *   **Transport Flow**:
-    1.  The aggregator writes the file to the configured `output_directory` (a folder monitored by Screamsheet).
-    2.  Screamsheet reads the file in the morning to render and print.
-    3.  Once processed/printed, Screamsheet moves the file into a `processed` subfolder (e.g., `C:/Users/Admin/Documents/screamsheet/incoming/processed/`).
+    1.  The aggregator writes the file to the configured `output_directory`.
+    2.  Downstream services or scheduled processes read the file for display, printing, or archival.
+    3.  Once processed, files can be archived or moved to a subfolder (e.g., `./output/processed/`).

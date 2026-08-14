@@ -1,6 +1,6 @@
-# Screamsheet Morning Aggregator — Setup & Credential Guide
+# Daily Agenda Aggregator — Setup & Credential Guide
 
-This guide walks you through gathering all necessary API keys, tokens, and board/calendar IDs required to configure `config.json` for the **Screamsheet Morning Aggregator**.
+This guide walks you through gathering all necessary API keys, tokens, and board/calendar IDs required to configure `config.json` for the **Daily Agenda Aggregator**.
 
 ---
 
@@ -76,7 +76,7 @@ Copy `config.json.example` to `config.json` and fill in your credentials:
 ```json
 {
   "max_tasks": 5,
-  "output_directory": "C:/Users/Admin/Documents/screamsheet/incoming",
+  "output_directory": "./output",
   "default_start_location": "123 Home St, Anytown, USA",
   "google_calendar": {
     "api_key": "YOUR_GOOGLE_CALENDAR_API_KEY",

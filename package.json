@@ -1,10 +1,10 @@
 {
-  "name": "screamsheet-morning-aggregator",
+  "name": "daily-agenda-aggregator",
   "version": "1.0.0",
-  "description": "CLI utility to scrape, aggregate, and normalize daily schedules and tasks into unified Screamsheet JSON agenda",
+  "description": "CLI utility to scrape, aggregate, and normalize daily schedules and tasks into a unified JSON agenda",
   "main": "dist/index.js",
   "bin": {
-    "screamsheet-aggregator": "dist/cli.js"
+    "agenda-aggregator": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "keywords": [
-    "screamsheet",
+    "agenda",
     "aggregator",
     "trello",
     "google-calendar",

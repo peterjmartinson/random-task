@@ -9,7 +9,7 @@ describe('End-to-End Pipeline Integration', () => {
     maps: { enabled: true },
   });
 
-  it('should run full mock pipeline and generate valid Screamsheet JSON', async () => {
+  it('should run full mock pipeline and generate valid agenda JSON', async () => {
     const targetDate = new Date('2026-08-13');
     const result = await runPipeline({
       config,

@@ -217,7 +217,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Node.js & Screamsheet Aggregator
+# Node.js & Daily Agenda Aggregator
 node_modules/
 dist/
 *.tsbuildinfo
