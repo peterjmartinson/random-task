@@ -7,13 +7,28 @@ export interface AgendaEventOutput {
   accessory?: string; // e.g. "Address: 104 Main St (15 min drive time. Leave by 02:15 PM)" or "Phone: (555) 012-3456"
 }
 
+export interface TaskLabelOutput {
+  id?: string;
+  name?: string;
+  color?: string;
+}
+
 export interface AgendaTaskOutput {
   id: string;
   title: string;
   priority: 'high' | 'medium' | 'low';
   url?: string;
+  assignee?: string;
+  due?: string;
+  labels?: TaskLabelOutput[];
+  cover_color?: string;
   subtasks?: string[];
   accessory?: string; // e.g. "PAST DUE"
+}
+
+export interface AgendaSectionOutput {
+  title: string;
+  tasks: AgendaTaskOutput[];
 }
 
 export interface AgendaOutputMetadata {
@@ -26,5 +41,5 @@ export interface AgendaOutput {
   date: string; // YYYY-MM-DD
   metadata: AgendaOutputMetadata;
   agenda: AgendaEventOutput[];
-  tasks: AgendaTaskOutput[];
+  sections: AgendaSectionOutput[];
 }

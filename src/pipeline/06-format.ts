@@ -55,7 +55,16 @@ export function formatOutput(
     };
   });
 
-  const formattedTasks: AgendaTaskOutput[] = tasks.map((task) => {
+  const sectionMap = new Map<string, AgendaTaskOutput[]>();
+  const sectionOrder: string[] = [];
+
+  for (const task of tasks) {
+    const sectionTitle = task.category || 'Tasks';
+    if (!sectionMap.has(sectionTitle)) {
+      sectionMap.set(sectionTitle, []);
+      sectionOrder.push(sectionTitle);
+    }
+
     let accessory: string | undefined = undefined;
     if (task.isPastDue) {
       accessory = 'PAST DUE';
@@ -63,25 +72,34 @@ export function formatOutput(
       accessory = `Phone: ${task.metadata.phone}`;
     }
 
-    return {
+    sectionMap.get(sectionTitle)!.push({
       id: task.id,
       title: task.title,
       priority: task.priority,
       url: task.url,
+      assignee: task.assignee,
+      due: task.dueDate,
+      labels: task.labels && task.labels.length > 0 ? task.labels : undefined,
+      cover_color: task.metadata?.cover_color || undefined,
       subtasks: task.subtasks && task.subtasks.length > 0 ? task.subtasks : undefined,
       accessory,
-    };
-  });
+    });
+  }
+
+  const sections = sectionOrder.map((title) => ({
+    title,
+    tasks: sectionMap.get(title) || [],
+  }));
 
   return {
     date: dateStr,
     metadata: {
       generated_at: nowIso,
       total_events: agenda.length,
-      total_tasks: formattedTasks.length,
+      total_tasks: tasks.length,
     },
     agenda,
-    tasks: formattedTasks,
+    sections,
   };
 }
 

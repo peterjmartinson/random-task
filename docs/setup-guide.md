@@ -1,86 +1,76 @@
 # Daily Agenda Aggregator — Setup & Credential Guide
 
-This guide walks you through gathering all necessary API keys, tokens, and board/calendar IDs required to configure `config.json` for the **Daily Agenda Aggregator**.
+This guide walks you through configuring `config.json` for the **Daily Agenda Aggregator**.
 
 ---
 
 ## 1. Overview of Required Credentials
 
-To aggregate data, the application reads a `config.json` file in the root directory (or passed via `--config <path>`). Here is a summary of what you need for each service:
+To aggregate data, the application reads a `config.json` file in the root directory (or passed via `--config <path>`). Here is a summary:
 
 | Service | Required Information | Where to Find / Generate |
 | :--- | :--- | :--- |
-| **Google Calendar** | `calendar_ids`, API Key or OAuth Access Token | Google Cloud Console |
+| **Calendars (iCal / Google / Apple / Outlook)** | `ical_urls` *(Recommended)* | Google Calendar / Apple Calendar settings |
 | **Trello** | `api_key`, `token`, `board_id`, `list_id` | Trello Developer Portal |
 | **Google Maps** | `api_key` | Google Cloud Console (Distance Matrix API) |
 
 ---
 
-## 2. Setting Up Google Calendar
+## 2. Setting Up Calendars (iCal Feeds — Recommended)
 
-### Option A: Using a Google API Key (For Public Calendars)
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new project or select an existing one.
-3. Enable the **Google Calendar API** under **APIs & Services > Library**.
-4. Navigate to **APIs & Services > Credentials** and click **Create Credentials > API Key**.
-5. Copy the generated API key into your `.env` or `config.json`.
+The simplest and most reliable way to connect your calendars without dealing with Google Cloud Console OAuth verification is via **Secret iCal feeds**:
 
-### Option B: Using OAuth2 / Service Account (For Private Calendars)
-1. In Google Cloud Console, navigate to **APIs & Services > Credentials**.
-2. Click **Create Credentials > OAuth client ID** (or Service Account).
-3. If using Service Account:
-   - Download the JSON key file.
-   - Share your private calendar(s) with the Service Account email address.
-4. **Finding Calendar IDs**:
-   - Open [Google Calendar](https://calendar.google.com/).
-   - Click the three dots next to the calendar under "My calendars" -> **Settings and sharing**.
-   - Scroll down to **Integrate calendar** to copy your **Calendar ID** (e.g., `primary` or `your_name@gmail.com` or `c_xxx...@group.calendar.google.com`).
+1. Open [Google Calendar](https://calendar.google.com/).
+2. On the left sidebar under "My calendars", hover over your calendar, click the three dots **⋮**, and select **Settings and sharing**.
+3. Scroll down to the **Integrate calendar** section.
+4. Locate **"Secret address in iCal format"** and copy the URL:
+   - Format looks like: `https://calendar.google.com/calendar/ical/your_name%40gmail.com/private-xxxxxxxx/basic.ics`
+5. Paste this URL into `calendars.ical_urls` in `config.json`.
+6. Repeat for each calendar you wish to sync (Personal, Family, School, Work, etc.).
 
 ---
 
 ## 3. Setting Up Trello API & IDs
 
 ### Step 1: Get your Trello API Key & User Token
-1. Log in to Trello and visit [https://trello.com/app-key](https://trello.com/app-key) (Trello Power-Up Admin / Developer Portal).
+1. Log in to Trello and visit [https://trello.com/app-key](https://trello.com/app-key).
 2. Copy your **API Key**.
 3. Next to the API Key, click the manually generated **Token** link to authorize read access.
 4. Copy the generated **Token** (keep this secret!).
 
 ### Step 2: Get your Board ID & List IDs
 1. Open the Trello board you want to aggregate in your browser.
-2. Add `.json` to the end of the browser URL:
-   - Example: `https://trello.com/b/AbCdEfGh/my-daily-board.json`
-3. Press `Ctrl + F` and search for `"id"` at the top level of the JSON payload. This is your **`board_id`** (e.g. `60d5ec...`).
-4. Search for `"lists": [` in the JSON file to find your list names and their corresponding IDs:
-   - Look for `"name": "Today"` -> copy its `"id"` value (e.g. `60d5ec991122...`).
-   - Look for `"name": "In Progress"` or `"Urgent"` -> copy its `"id"` value.
+2. Add `.json` to the end of the browser URL (e.g., `https://trello.com/b/AbCdEfGh/my-daily-board.json`).
+3. Press `Ctrl + F` and search for `"id"` at the top level of the JSON payload. This is your **`board_id`**.
+4. Search for `"lists": [` in the JSON file to find your target list IDs (e.g. `"name": "Today"`).
 
 ---
 
-## 4. Setting Up Google Maps Distance Matrix API
+## 4. Setting Up Google Maps Distance Matrix API (Optional)
 
-The aggregator uses Google Maps to compute travel duration from your starting location to calendar event locations.
+The aggregator uses Google Maps to compute drive times from your starting location to calendar event locations:
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
 2. Enable the **Distance Matrix API** under **APIs & Services > Library**.
 3. Create an API Key under **APIs & Services > Credentials**.
-4. (Recommended) Restrict the API key to only allow calls to the Distance Matrix API.
-5. Copy the key to `maps.api_key` in `config.json`.
+4. Copy the key to `maps.api_key` in `config.json`.
 
 ---
 
 ## 5. Configuring `config.json`
 
-Copy `config.json.example` to `config.json` and fill in your credentials:
+Create/edit `config.json` in the project root:
 
 ```json
 {
   "max_tasks": 5,
   "output_directory": "./output",
   "default_start_location": "123 Home St, Anytown, USA",
-  "google_calendar": {
-    "api_key": "YOUR_GOOGLE_CALENDAR_API_KEY",
-    "calendar_ids": ["primary", "family@group.calendar.google.com"]
+  "calendars": {
+    "ical_urls": [
+      "https://calendar.google.com/calendar/ical/peter.j.martinson%40gmail.com/private-xxxxxxx/basic.ics",
+      "https://calendar.google.com/calendar/ical/family.../private-xxxxxxx/basic.ics"
+    ]
   },
   "trello": {
     "api_key": "YOUR_TRELLO_API_KEY",
@@ -100,16 +90,17 @@ Copy `config.json.example` to `config.json` and fill in your credentials:
 }
 ```
 
-> **Note**: You can also use environment variables (`GOOGLE_CALENDAR_API_KEY`, `TRELLO_API_KEY`, `TRELLO_TOKEN`, `MAPS_API_KEY`) to keep secrets out of `config.json`.
-
 ---
 
-## 6. Testing Without Live Credentials (Offline / Mock Mode)
-
-You can run the aggregator in mock mode at any time without entering real keys:
+## 6. Running the Aggregator
 
 ```bash
+# Run for today
+npx tsx src/cli.ts
+
+# Run for a specific date
+npx tsx src/cli.ts --date 2026-08-28
+
+# Offline mock dry-run
 npx tsx src/cli.ts --mock --dry-run
 ```
-
-This will run the full pipeline against sample mock calendars and Trello cards and print the resulting `agenda-YYYY-MM-DD.json` payload directly to stdout.

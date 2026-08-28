@@ -1,6 +1,7 @@
 import { AppConfig } from '../config/config.schema.js';
 import { SourceAdapter } from '../adapters/base.adapter.js';
 import { GoogleCalendarAdapter } from '../adapters/google-calendar.js';
+import { ICalAdapter } from '../adapters/ical.adapter.js';
 import { TrelloAdapter } from '../adapters/trello.js';
 import { MockAdapter } from '../adapters/mock.adapter.js';
 import { ingestSources } from './01-ingest.js';
@@ -24,7 +25,7 @@ export async function runPipeline(options: RunPipelineOptions): Promise<AgendaOu
   // Step A: Select Source Adapters
   const adapters: SourceAdapter[] = mock
     ? [new MockAdapter()]
-    : [new GoogleCalendarAdapter(), new TrelloAdapter()];
+    : [new ICalAdapter(), new GoogleCalendarAdapter(), new TrelloAdapter()];
 
   // Step A & B: Ingestion & Parsing
   const rawItems = await ingestSources(adapters, targetDate, config);

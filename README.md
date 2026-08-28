@@ -74,15 +74,17 @@ cp config.json.example config.json
   "max_tasks": 5,
   "output_directory": "./output",
   "default_start_location": "123 Home St, Anytown, USA",
-  "google_calendar": {
-    "api_key": "YOUR_GOOGLE_CALENDAR_API_KEY",
-    "calendar_ids": ["primary"]
+  "calendars": {
+    "ical_urls": [
+      "https://calendar.google.com/calendar/ical/YOUR_EMAIL/private-YOUR_TOKEN/basic.ics"
+    ]
   },
   "trello": {
     "api_key": "YOUR_TRELLO_API_KEY",
     "token": "YOUR_TRELLO_USER_TOKEN",
     "boards": [
       {
+        "name": "Homework",
         "board_id": "YOUR_BOARD_ID",
         "lists": ["YOUR_LIST_ID_TODAY"]
       }

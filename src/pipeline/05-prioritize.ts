@@ -16,21 +16,40 @@ export function prioritizeAndFilterItems(
     return timeA - timeB;
   });
 
-  // 3. Sort Tasks by priority (past-due first, then high > medium > low)
+  // 3. Group tasks by category and sort (past-due first, then high > medium > low)
   const priorityWeight = { high: 3, medium: 2, low: 1 };
-
-  tasks.sort((a, b) => {
+  const sortFn = (a: UnifiedItem, b: UnifiedItem) => {
     if (a.isPastDue && !b.isPastDue) return -1;
     if (!a.isPastDue && b.isPastDue) return 1;
 
     const weightA = priorityWeight[a.priority] || 1;
     const weightB = priorityWeight[b.priority] || 1;
     return weightB - weightA;
-  });
+  };
 
-  // 4. Cap tasks to max_tasks from config
-  const maxTasks = config.max_tasks ?? 5;
-  const limitedTasks = tasks.slice(0, maxTasks);
+  const categoriesOrder: string[] = [];
+  const tasksByCategory = new Map<string, UnifiedItem[]>();
+
+  for (const task of tasks) {
+    const cat = task.category || 'Tasks';
+    if (!tasksByCategory.has(cat)) {
+      tasksByCategory.set(cat, []);
+      categoriesOrder.push(cat);
+    }
+    tasksByCategory.get(cat)!.push(task);
+  }
+
+  // 4. Cap tasks per section
+  const globalMax = config.max_tasks ?? 5;
+  const limitedTasks: UnifiedItem[] = [];
+
+  for (const cat of categoriesOrder) {
+    const catTasks = tasksByCategory.get(cat)!;
+    catTasks.sort(sortFn);
+
+    const catMax = catTasks[0]?.metadata?.max_tasks ?? globalMax;
+    limitedTasks.push(...catTasks.slice(0, catMax));
+  }
 
   return {
     events,

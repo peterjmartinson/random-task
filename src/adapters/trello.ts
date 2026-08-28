@@ -1,8 +1,54 @@
 import axios from 'axios';
 import { SourceAdapter } from './base.adapter.js';
 import { AppConfig } from '../config/config.schema.js';
-import { UnifiedItem, PriorityLevel } from '../models/unified.model.js';
+import { UnifiedItem, PriorityLevel, TaskLabel } from '../models/unified.model.js';
 import { parseContacts } from '../utils/contact-parser.js';
+
+function resolveCardMetadata(
+  card: any,
+  configuredLabels?: Record<string, any>
+): { assignee?: string; enrichedLabels: TaskLabel[]; coverColor?: string } {
+  const cardLabels: TaskLabel[] = (card.labels || []).map((l: any) => ({
+    id: l.id,
+    name: l.name || undefined,
+    color: l.color || undefined,
+  }));
+  const coverColor = card.cover?.color || undefined;
+  let assignee: string | undefined = undefined;
+
+  if (configuredLabels) {
+    for (const [key, def] of Object.entries(configuredLabels)) {
+      const matchByLabelId = def.label_id && cardLabels.some((l) => l.id === def.label_id);
+      const matchByName =
+        (def.name || key) &&
+        cardLabels.some((l) => (l.name || '').toLowerCase() === (def.name || key).toLowerCase());
+      const matchByCoverColor =
+        def.cover_color && coverColor && coverColor.toLowerCase() === def.cover_color.toLowerCase();
+      const matchByColor =
+        def.color && cardLabels.some((l) => (l.color || '').toLowerCase() === def.color.toLowerCase());
+
+      if (matchByLabelId || matchByName || matchByCoverColor || matchByColor) {
+        assignee = def.assignee || key;
+
+        // If card label had no name in Trello, enrich it with definition name/key
+        for (const l of cardLabels) {
+          if ((def.label_id && l.id === def.label_id) || (def.color && l.color === def.color)) {
+            if (!l.name) {
+              l.name = def.name || key;
+            }
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  return {
+    assignee,
+    enrichedLabels: cardLabels,
+    coverColor,
+  };
+}
 
 export class TrelloAdapter implements SourceAdapter {
   name = 'trello';
@@ -24,6 +70,7 @@ export class TrelloAdapter implements SourceAdapter {
 
     for (const board of boards) {
       const { board_id, lists } = board;
+      const category = board.name || 'Tasks';
 
       // 1. Fetch cards for specified lists
       for (const listId of lists) {
@@ -75,6 +122,7 @@ export class TrelloAdapter implements SourceAdapter {
             }
 
             const contacts = parseContacts(card.desc);
+            const cardMeta = resolveCardMetadata(card, board.labels);
 
             items.push({
               id: `trello-${card.id}`,
@@ -88,9 +136,15 @@ export class TrelloAdapter implements SourceAdapter {
               subtasks,
               dueDate: card.due || undefined,
               isPastDue,
+              category,
+              assignee: cardMeta.assignee,
+              labels: cardMeta.enrichedLabels.length > 0 ? cardMeta.enrichedLabels : undefined,
               metadata: {
                 board_id,
+                board_name: category,
                 list_id: listId,
+                cover_color: cardMeta.coverColor,
+                max_tasks: board.max_tasks,
                 phone: contacts.phone,
                 email: contacts.email,
               },
@@ -124,6 +178,8 @@ export class TrelloAdapter implements SourceAdapter {
               if (items.some((i) => i.id === `trello-${card.id}`)) continue;
 
               const contacts = parseContacts(card.desc);
+              const cardMeta = resolveCardMetadata(card, board.labels);
+
               items.push({
                 id: `trello-${card.id}`,
                 source: this.name,
@@ -136,8 +192,14 @@ export class TrelloAdapter implements SourceAdapter {
                 subtasks: [],
                 dueDate: card.due,
                 isPastDue: true,
+                category,
+                assignee: cardMeta.assignee,
+                labels: cardMeta.enrichedLabels.length > 0 ? cardMeta.enrichedLabels : undefined,
                 metadata: {
                   board_id,
+                  board_name: category,
+                  cover_color: cardMeta.coverColor,
+                  max_tasks: board.max_tasks,
                   phone: contacts.phone,
                   email: contacts.email,
                 },

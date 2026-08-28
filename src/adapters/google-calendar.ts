@@ -4,6 +4,26 @@ import { AppConfig } from '../config/config.schema.js';
 import { UnifiedItem } from '../models/unified.model.js';
 import { parseContacts } from '../utils/contact-parser.js';
 
+async function resolveAccessToken(gcalConfig: AppConfig['google_calendar']): Promise<string | undefined> {
+  if (gcalConfig?.access_token) {
+    return gcalConfig.access_token;
+  }
+  if (gcalConfig?.refresh_token && gcalConfig.client_id && gcalConfig.client_secret) {
+    try {
+      const resp = await axios.post('https://oauth2.googleapis.com/token', {
+        client_id: gcalConfig.client_id,
+        client_secret: gcalConfig.client_secret,
+        refresh_token: gcalConfig.refresh_token,
+        grant_type: 'refresh_token',
+      });
+      return resp.data?.access_token;
+    } catch (err: any) {
+      console.warn(`Failed to refresh Google OAuth token: ${err?.response?.data?.error_description || err.message}`);
+    }
+  }
+  return undefined;
+}
+
 export class GoogleCalendarAdapter implements SourceAdapter {
   name = 'google_calendar';
 
@@ -14,10 +34,10 @@ export class GoogleCalendarAdapter implements SourceAdapter {
     }
 
     const apiKey = gcalConfig.api_key;
-    const accessToken = gcalConfig.access_token;
+    const accessToken = await resolveAccessToken(gcalConfig);
 
     if (!apiKey && !accessToken) {
-      console.warn('Google Calendar adapter skipped: Neither api_key nor access_token provided.');
+      console.warn('Google Calendar adapter skipped: Neither api_key nor valid OAuth access_token/refresh_token provided.');
       return [];
     }
 

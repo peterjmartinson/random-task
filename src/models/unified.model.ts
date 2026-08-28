@@ -17,6 +17,12 @@ export interface UnifiedItemMetadata {
   [key: string]: any;
 }
 
+export interface TaskLabel {
+  id?: string;
+  name?: string;
+  color?: string;
+}
+
 export interface UnifiedItem {
   id: string;
   source: string; // 'google_calendar', 'trello', 'mock', etc.
@@ -30,5 +36,8 @@ export interface UnifiedItem {
   subtasks?: string[];
   dueDate?: string; // ISO 8601 date string for tasks
   isPastDue?: boolean;
+  category?: string; // Section or board category (e.g. 'Homework', 'Home Maintenance')
+  assignee?: string; // Identified person or assignee (e.g. 'Isaac', 'Asher')
+  labels?: TaskLabel[];
   metadata: UnifiedItemMetadata;
 }

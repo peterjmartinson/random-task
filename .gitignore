@@ -222,6 +222,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 config.json
+client.json
 agenda-*.json
 .env
 .env.local

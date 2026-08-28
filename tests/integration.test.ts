@@ -20,15 +20,17 @@ describe('End-to-End Pipeline Integration', () => {
     expect(result.date).toBe('2026-08-13');
     expect(result.metadata.generated_at).toBeDefined();
     expect(result.agenda).toBeDefined();
-    expect(result.tasks).toBeDefined();
+    expect(result.sections).toBeDefined();
+    expect(result.sections.length).toBeGreaterThan(0);
 
     // Verify deduplication merged duplicate event/task
     const syncEvent = result.agenda.find((e) => e.title === 'Project Sync w/ Sarah');
     expect(syncEvent).toBeDefined();
     expect(syncEvent?.accessory).toContain('Phone: (555) 012-3456');
 
-    // Verify past due accessory tag
-    const pastDueTask = result.tasks.find((t) => t.title === 'Draft weekly project budget');
+    // Verify past due accessory tag in sections
+    const allSectionTasks = result.sections.flatMap(s => s.tasks);
+    const pastDueTask = allSectionTasks.find((t) => t.title === 'Draft weekly project budget');
     expect(pastDueTask).toBeDefined();
     expect(pastDueTask?.accessory).toBe('PAST DUE');
   });
