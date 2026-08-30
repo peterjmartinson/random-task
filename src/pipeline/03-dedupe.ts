@@ -28,11 +28,29 @@ export function deduplicateItems(items: UnifiedItem[]): UnifiedItem[] {
 }
 
 function isDuplicate(a: UnifiedItem, b: UnifiedItem): boolean {
-  // Rule 1: Cross-linked URL matching
+  // Rule 0: Different assignees belong to different people and are never duplicates
+  if (a.assignee && b.assignee && a.assignee !== b.assignee) {
+    return false;
+  }
+
+  // Rule 1: If both items are tasks, differentiate by unique ID and composite key (title, assignee)
+  if (a.type === 'task' && b.type === 'task') {
+    if (a.assignee !== b.assignee) {
+      return false;
+    }
+    // Check cross-linked URL matching for tasks
+    if (a.url && b.description && b.description.includes(a.url)) return true;
+    if (b.url && a.description && a.description.includes(b.url)) return true;
+
+    // Distinct task cards with different IDs must not be merged
+    return a.id === b.id;
+  }
+
+  // Rule 2: Cross-linked URL matching (e.g. between event and task or between events)
   if (a.url && b.description && b.description.includes(a.url)) return true;
   if (b.url && a.description && a.description.includes(b.url)) return true;
 
-  // Rule 2: Fuzzy title matching
+  // Rule 3: Fuzzy title matching (e.g. merging calendar event and matching task or duplicate events)
   const titleA = a.title.toLowerCase().trim();
   const titleB = b.title.toLowerCase().trim();
 
@@ -60,6 +78,8 @@ function mergeItems(a: UnifiedItem, b: UnifiedItem): UnifiedItem {
     ...eventItem,
     type: isEvent ? 'event' : eventItem.type,
     url: eventItem.url || taskItem.url,
+    assignee: eventItem.assignee || taskItem.assignee,
+    category: eventItem.category || taskItem.category,
     subtasks: mergedSubtasks.length > 0 ? mergedSubtasks : undefined,
     metadata: {
       ...taskItem.metadata,
