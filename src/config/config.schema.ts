@@ -10,10 +10,20 @@ export const TrelloLabelDefinitionSchema = z
   })
   .passthrough();
 
+export const TrelloListEntrySchema = z.union([
+  z.string(),
+  z.object({
+    id: z.string(),
+    name: z.string().optional(),
+    assignee: z.string().optional(),
+    max_tasks: z.number().int().positive().optional(),
+  }),
+]);
+
 export const TrelloBoardConfigSchema = z.object({
   name: z.string().optional(),
   board_id: z.string(),
-  lists: z.array(z.string()).default([]),
+  lists: z.array(TrelloListEntrySchema).default([]),
   max_tasks: z.number().int().positive().optional(),
   labels: z.record(z.string(), TrelloLabelDefinitionSchema).optional(),
 });

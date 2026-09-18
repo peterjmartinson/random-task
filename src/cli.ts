@@ -27,7 +27,8 @@ program
 
       let targetDate = new Date();
       if (options.date) {
-        const parsedDate = new Date(options.date);
+        const dateStr = options.date.includes('T') ? options.date : `${options.date}T00:00:00`;
+        const parsedDate = new Date(dateStr);
         if (isNaN(parsedDate.getTime())) {
           console.error(`Error: Invalid date format "${options.date}". Expected YYYY-MM-DD.`);
           process.exit(1);
