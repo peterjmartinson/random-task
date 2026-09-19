@@ -16,12 +16,26 @@ export function prioritizeAndFilterItems(
     return timeA - timeB;
   });
 
-  // 3. Group tasks by category and sort (past-due first, then high > medium > low)
+  // 3. Group tasks by category and sort:
+  //    (Past-due first -> Earliest due date first -> High priority -> Medium/Low)
   const priorityWeight = { high: 3, medium: 2, low: 1 };
   const sortFn = (a: UnifiedItem, b: UnifiedItem) => {
+    // 1. Past due items always come first
     if (a.isPastDue && !b.isPastDue) return -1;
     if (!a.isPastDue && b.isPastDue) return 1;
 
+    // 2. Sort chronologically by due date (earliest due first)
+    if (a.dueDate && b.dueDate) {
+      const timeA = new Date(a.dueDate).getTime();
+      const timeB = new Date(b.dueDate).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+    } else if (a.dueDate && !b.dueDate) {
+      return -1;
+    } else if (!a.dueDate && b.dueDate) {
+      return 1;
+    }
+
+    // 3. Sort by priority
     const weightA = priorityWeight[a.priority] || 1;
     const weightB = priorityWeight[b.priority] || 1;
     return weightB - weightA;
@@ -40,7 +54,7 @@ export function prioritizeAndFilterItems(
   }
 
   // 4. Cap tasks per section
-  const globalMax = config.max_tasks ?? 5;
+  const globalMax = config.max_tasks ?? 10;
   const limitedTasks: UnifiedItem[] = [];
 
   for (const cat of categoriesOrder) {

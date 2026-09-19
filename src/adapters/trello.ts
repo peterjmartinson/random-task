@@ -70,11 +70,33 @@ export class TrelloAdapter implements SourceAdapter {
 
     for (const board of boards) {
       const { board_id, lists } = board;
-      const category = board.name || 'Tasks';
+      const defaultCategory = board.name || 'Tasks';
 
       // 1. Fetch cards for specified lists
-      for (const listId of lists) {
+      for (const listEntry of lists) {
+        const listId = typeof listEntry === 'string' ? listEntry : listEntry.id;
+        let listAssignee = typeof listEntry === 'object' ? listEntry.assignee : undefined;
+        let listName = typeof listEntry === 'object' ? listEntry.name : undefined;
+        const listMaxTasks = typeof listEntry === 'object' ? listEntry.max_tasks : board.max_tasks;
+
         try {
+          // If name/assignee isn't known, optionally fetch list details from Trello
+          if (!listName && !listAssignee) {
+            try {
+              const listRes = await axios.get(`https://api.trello.com/1/lists/${listId}`, {
+                params: { key: api_key, token: token },
+                timeout: 5000,
+              });
+              listName = listRes.data?.name;
+              if (listName && !listAssignee) {
+                // If list is named "Isaac" or "Asher", treat as assignee
+                listAssignee = listName;
+              }
+            } catch {
+              // Ignore if list info fetch fails
+            }
+          }
+
           const cardsUrl = `https://api.trello.com/1/lists/${listId}/cards`;
           const response = await axios.get(cardsUrl, {
             params: {
@@ -123,6 +145,8 @@ export class TrelloAdapter implements SourceAdapter {
 
             const contacts = parseContacts(card.desc);
             const cardMeta = resolveCardMetadata(card, board.labels);
+            const effectiveAssignee = cardMeta.assignee || listAssignee || listName;
+            const category = effectiveAssignee || defaultCategory;
 
             items.push({
               id: `trello-${card.id}`,
@@ -137,14 +161,15 @@ export class TrelloAdapter implements SourceAdapter {
               dueDate: card.due || undefined,
               isPastDue,
               category,
-              assignee: cardMeta.assignee,
+              assignee: effectiveAssignee,
               labels: cardMeta.enrichedLabels.length > 0 ? cardMeta.enrichedLabels : undefined,
               metadata: {
                 board_id,
-                board_name: category,
+                board_name: defaultCategory,
                 list_id: listId,
+                list_name: listName,
                 cover_color: cardMeta.coverColor,
-                max_tasks: board.max_tasks,
+                max_tasks: listMaxTasks,
                 phone: contacts.phone,
                 email: contacts.email,
               },
@@ -192,12 +217,12 @@ export class TrelloAdapter implements SourceAdapter {
                 subtasks: [],
                 dueDate: card.due,
                 isPastDue: true,
-                category,
+                category: cardMeta.assignee || defaultCategory,
                 assignee: cardMeta.assignee,
                 labels: cardMeta.enrichedLabels.length > 0 ? cardMeta.enrichedLabels : undefined,
                 metadata: {
                   board_id,
-                  board_name: category,
+                  board_name: defaultCategory,
                   cover_color: cardMeta.coverColor,
                   max_tasks: board.max_tasks,
                   phone: contacts.phone,
