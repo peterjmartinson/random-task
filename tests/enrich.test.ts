@@ -52,4 +52,29 @@ describe('Enrichment Module', () => {
     expect(result[0].metadata.drive_time_mins).toBeGreaterThan(0);
     expect(result[0].metadata.leave_by_time).toBeDefined();
   });
+
+  it('should calculate drive time but NOT leave by time for all-day events', async () => {
+    const items: UnifiedItem[] = [
+      {
+        id: '1',
+        source: 'gcal',
+        type: 'event',
+        title: 'Hotel Stay',
+        timeWindow: {
+          start: '2026-08-13T00:00:00Z',
+          end: '2026-08-14T00:00:00Z',
+          allDay: true,
+        },
+        priority: 'medium',
+        status: 'pending',
+        metadata: {
+          location: '104 Main St, Anytown, USA',
+        },
+      },
+    ];
+
+    const result = await enrichItems(items, config);
+    expect(result[0].metadata.drive_time_mins).toBeGreaterThan(0);
+    expect(result[0].metadata.leave_by_time).toBeUndefined();
+  });
 });
