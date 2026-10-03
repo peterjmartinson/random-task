@@ -51,8 +51,8 @@ export async function enrichItems(
       if (driveResult) {
         item.metadata.drive_time_mins = driveResult.durationMinutes;
 
-        // Calculate "Leave by" time
-        if (item.timeWindow?.start) {
+        // Calculate "Leave by" time (skip for all-day events)
+        if (item.timeWindow?.start && !item.timeWindow?.allDay) {
           const eventStartTime = new Date(item.timeWindow.start);
           const leaveByTime = new Date(
             eventStartTime.getTime() - driveResult.durationMinutes * 60 * 1000

@@ -166,7 +166,7 @@ export class ICalAdapter implements SourceAdapter {
             const evtStart = new Date(event.start);
             const evtEnd = event.end ? new Date(event.end) : new Date(evtStart.getTime() + 3600000);
 
-            if (evtEnd >= startOfDay && evtStart <= endOfDay) {
+            if (evtEnd > startOfDay && evtStart <= endOfDay) {
               const isAllDay = event.datetype === 'date' || (evtEnd.getTime() - evtStart.getTime()) >= 86400000;
               const title = extractString(event.summary) || 'Untitled Event';
               const description = extractString(event.description);
