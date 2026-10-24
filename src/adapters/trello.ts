@@ -72,6 +72,14 @@ export class TrelloAdapter implements SourceAdapter {
       const { board_id, lists } = board;
       const defaultCategory = board.name || 'Tasks';
 
+      // If Homework API is configured and enabled, skip legacy Trello Homework board
+      const hwApiActive =
+        config.homework?.enabled !== false &&
+        Boolean((config.homework?.api_url || process.env.HOMEWORK_API_URL || '').trim());
+      if (hwApiActive && defaultCategory.toLowerCase() === 'homework') {
+        continue;
+      }
+
       // 1. Fetch cards for specified lists
       for (const listEntry of lists) {
         const listId = typeof listEntry === 'string' ? listEntry : listEntry.id;
