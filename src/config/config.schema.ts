@@ -58,6 +58,13 @@ export const MapsConfigSchema = z.object({
   api_key: z.string().optional(),
 });
 
+export const HomeworkConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  api_url: z.string().optional(),
+  max_tasks: z.number().int().positive().optional(),
+  group_by_kid: z.boolean().default(true),
+});
+
 export const AppConfigSchema = z.object({
   max_tasks: z.number().int().positive().default(5),
   output_directory: z.string().default('./incoming'),
@@ -65,11 +72,13 @@ export const AppConfigSchema = z.object({
   calendars: CalendarConfigSchema.default({}),
   google_calendar: CalendarConfigSchema.default({}),
   trello: TrelloConfigSchema.default({}),
+  homework: HomeworkConfigSchema.default({}),
   maps: MapsConfigSchema.default({}),
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 export type TrelloConfig = z.infer<typeof TrelloConfigSchema>;
+export type HomeworkConfig = z.infer<typeof HomeworkConfigSchema>;
 export type CalendarConfig = z.infer<typeof CalendarConfigSchema>;
 export type GoogleCalendarConfig = z.infer<typeof CalendarConfigSchema>;
 export type MapsConfig = z.infer<typeof MapsConfigSchema>;
