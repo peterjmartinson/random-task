@@ -23,12 +23,18 @@ export interface HomeworkApiResponse {
   tasks: HomeworkApiTask[];
 }
 
+export const DEFAULT_HOMEWORK_API_URL = 'https://assignment-tracker-umber.vercel.app/api/homework';
+
 export class HomeworkApiAdapter implements SourceAdapter {
   name = 'homework_api';
 
   async fetchItems(targetDate: Date, config: AppConfig): Promise<UnifiedItem[]> {
     const hwConfig = config.homework;
-    const apiUrl = (hwConfig?.api_url || process.env.HOMEWORK_API_URL || '').trim();
+    const apiUrl = (
+      hwConfig?.api_url ||
+      process.env.HOMEWORK_API_URL ||
+      DEFAULT_HOMEWORK_API_URL
+    ).trim();
 
     if (hwConfig?.enabled === false || !apiUrl) {
       return [];
@@ -49,6 +55,7 @@ export class HomeworkApiAdapter implements SourceAdapter {
       return tasks.map((t, idx) => {
         const kid = (t.kid || '').trim() || undefined;
         const subject = (t.class || '').trim() || undefined;
+        const cleanTitle = (t.raw_title || t.title || '').trim();
         const category = groupByKid && kid ? kid : 'Homework';
         const priority: PriorityLevel =
           t.priority === 'high' || t.priority === 'medium' || t.priority === 'low'
@@ -59,7 +66,7 @@ export class HomeworkApiAdapter implements SourceAdapter {
           id: t.id || `hw-${idx}`,
           source: this.name,
           type: 'task',
-          title: t.title,
+          title: cleanTitle,
           priority,
           status: 'pending',
           description: t.notes || '',
