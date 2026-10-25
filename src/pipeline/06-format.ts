@@ -68,6 +68,8 @@ export function formatOutput(
     let accessory: string | undefined = undefined;
     if (task.isPastDue) {
       accessory = 'PAST DUE';
+    } else if (task.metadata?.due_label) {
+      accessory = String(task.metadata.due_label);
     } else if (task.metadata.phone) {
       accessory = `Phone: ${task.metadata.phone}`;
     }
