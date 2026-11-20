@@ -12,16 +12,25 @@ import { enrichItems } from './04-enrich.js';
 import { prioritizeAndFilterItems } from './05-prioritize.js';
 import { formatOutput } from './06-format.js';
 import { AgendaOutput } from '../models/output.model.js';
+import {
+  dateFromYmd,
+  getDateStringInTimeZone,
+  resolveTimeZone,
+} from '../utils/timezone.js';
 
 export interface RunPipelineOptions {
   config: AppConfig;
   targetDate?: Date;
+  timezone?: string;
   mock?: boolean;
 }
 
 export async function runPipeline(options: RunPipelineOptions): Promise<AgendaOutput> {
-  const { config, mock } = options;
-  const targetDate = options.targetDate || new Date();
+  const { mock } = options;
+  const timeZone = resolveTimeZone(options.timezone || options.config.timezone);
+  const config: AppConfig = { ...options.config, timezone: timeZone };
+  const targetDate =
+    options.targetDate || dateFromYmd(getDateStringInTimeZone(new Date(), timeZone));
 
   // Step A: Select Source Adapters
   const adapters: SourceAdapter[] = mock
@@ -42,5 +51,5 @@ export async function runPipeline(options: RunPipelineOptions): Promise<AgendaOu
   const { events, tasks } = prioritizeAndFilterItems(enrichedItems, config);
 
   // Step F: Schema Formatting
-  return formatOutput(targetDate, events, tasks);
+  return formatOutput(targetDate, events, tasks, timeZone);
 }

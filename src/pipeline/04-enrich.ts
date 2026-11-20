@@ -2,12 +2,14 @@ import { AppConfig } from '../config/config.schema.js';
 import { UnifiedItem } from '../models/unified.model.js';
 import { parseContacts } from '../utils/contact-parser.js';
 import { calculateDriveTime } from '../utils/maps-client.js';
+import { formatTimeInTimeZone, resolveTimeZone } from '../utils/timezone.js';
 
 export async function enrichItems(
   items: UnifiedItem[],
   config: AppConfig
 ): Promise<UnifiedItem[]> {
   const enriched: UnifiedItem[] = [];
+  const timeZone = resolveTimeZone(config.timezone);
 
   let currentBaseLocation = config.default_start_location;
 
@@ -58,7 +60,7 @@ export async function enrichItems(
             eventStartTime.getTime() - driveResult.durationMinutes * 60 * 1000
           );
 
-          item.metadata.leave_by_time = formatTimeString(leaveByTime);
+          item.metadata.leave_by_time = formatTimeInTimeZone(leaveByTime, timeZone);
         }
 
         // Update currentBaseLocation for subsequent events
@@ -81,15 +83,4 @@ export async function enrichItems(
   }
 
   return enriched;
-}
-
-function formatTimeString(date: Date): string {
-  let hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12; // 0 hour should be 12
-  const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
-  const hoursStr = hours < 10 ? `0${hours}` : hours;
-  return `${hoursStr}:${minutesStr} ${ampm}`;
 }

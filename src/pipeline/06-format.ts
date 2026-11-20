@@ -4,20 +4,28 @@ import {
   AgendaEventOutput,
   AgendaTaskOutput,
 } from '../models/output.model.js';
+import {
+  DEFAULT_TIMEZONE,
+  extractCalendarDateStr,
+  formatTimeInTimeZone,
+  resolveTimeZone,
+} from '../utils/timezone.js';
 
 export function formatOutput(
   targetDate: Date,
   events: UnifiedItem[],
-  tasks: UnifiedItem[]
+  tasks: UnifiedItem[],
+  timeZone: string = DEFAULT_TIMEZONE
 ): AgendaOutput {
-  const dateStr = targetDate.toISOString().slice(0, 10);
+  const effectiveTimeZone = resolveTimeZone(timeZone);
+  const dateStr = extractCalendarDateStr(targetDate);
   const nowIso = new Date().toISOString();
 
   const agenda: AgendaEventOutput[] = events.map((event) => {
     let timeStr = 'All Day';
     if (event.timeWindow?.start && event.timeWindow?.end && !event.timeWindow.allDay) {
-      const startTime = formatTimeString(new Date(event.timeWindow.start));
-      const endTime = formatTimeString(new Date(event.timeWindow.end));
+      const startTime = formatTimeInTimeZone(new Date(event.timeWindow.start), effectiveTimeZone);
+      const endTime = formatTimeInTimeZone(new Date(event.timeWindow.end), effectiveTimeZone);
       timeStr = `${startTime} - ${endTime}`;
     }
 
@@ -50,6 +58,9 @@ export function formatOutput(
       type: 'event',
       title: event.title,
       time: timeStr,
+      start: event.timeWindow?.start,
+      end: event.timeWindow?.end,
+      allDay: event.timeWindow?.allDay,
       url: event.url,
       accessory,
     };
@@ -97,21 +108,11 @@ export function formatOutput(
     date: dateStr,
     metadata: {
       generated_at: nowIso,
+      timezone: effectiveTimeZone,
       total_events: agenda.length,
       total_tasks: tasks.length,
     },
     agenda,
     sections,
   };
-}
-
-function formatTimeString(date: Date): string {
-  let hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
-  const hoursStr = hours < 10 ? `0${hours}` : hours;
-  return `${hoursStr}:${minutesStr} ${ampm}`;
 }

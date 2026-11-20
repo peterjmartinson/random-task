@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_TIMEZONE, isValidTimeZone } from '../utils/timezone.js';
 
 export const TrelloLabelDefinitionSchema = z
   .object({
@@ -66,6 +67,10 @@ export const HomeworkConfigSchema = z.object({
 });
 
 export const AppConfigSchema = z.object({
+  timezone: z
+    .string()
+    .default(DEFAULT_TIMEZONE)
+    .refine(isValidTimeZone, { message: 'Invalid IANA timezone identifier' }),
   max_tasks: z.number().int().positive().default(5),
   output_directory: z.string().default('./incoming'),
   default_start_location: z.string().default('123 Home St, Anytown, USA'),

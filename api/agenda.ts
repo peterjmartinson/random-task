@@ -1,6 +1,12 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { runPipeline } from '../src/pipeline/index.js';
 import { AppConfigSchema } from '../src/config/config.schema.js';
+import {
+  dateFromYmd,
+  getDateStringInTimeZone,
+  isValidTimeZone,
+  parseTargetDateInput,
+} from '../src/utils/timezone.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS Headers
@@ -65,15 +71,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const config = parseResult.data;
 
-    // Parse target date from query parameters or default to current date
-    let targetDate = new Date();
+    // Resolve optional timezone query override (?tz=America/New_York or ?timezone=America/New_York)
+    const rawQueryTz = req.query.tz ?? req.query.timezone;
+    const queryTz = Array.isArray(rawQueryTz) ? rawQueryTz[0] : rawQueryTz;
+    if (queryTz !== undefined && queryTz !== '') {
+      if (!isValidTimeZone(queryTz)) {
+        res.status(400).json({ error: `Invalid timezone parameter: "${queryTz}". Use an IANA timezone such as "America/New_York".` });
+        return;
+      }
+      config.timezone = queryTz;
+    }
+
+    // Parse target date from query parameters or default to today in the effective timezone
+    let targetDate: Date;
     if (req.query.date) {
-      const parsedDate = new Date(req.query.date as string);
-      if (isNaN(parsedDate.getTime())) {
+      const rawDate = Array.isArray(req.query.date) ? req.query.date[0] : req.query.date;
+      const parsedDate = parseTargetDateInput(rawDate);
+      if (!parsedDate) {
         res.status(400).json({ error: 'Invalid date parameter. Use YYYY-MM-DD.' });
         return;
       }
       targetDate = parsedDate;
+    } else {
+      targetDate = dateFromYmd(getDateStringInTimeZone(new Date(), config.timezone));
     }
 
     // Support mock parameter for dry-run testing via API query string
@@ -83,6 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const agendaOutput = await runPipeline({
       config,
       targetDate,
+      timezone: config.timezone,
       mock: useMock,
     });
 

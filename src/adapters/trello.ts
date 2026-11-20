@@ -3,6 +3,11 @@ import { SourceAdapter } from './base.adapter.js';
 import { AppConfig } from '../config/config.schema.js';
 import { UnifiedItem, PriorityLevel, TaskLabel } from '../models/unified.model.js';
 import { parseContacts } from '../utils/contact-parser.js';
+import {
+  extractCalendarDateStr,
+  getDayBoundsInTimeZone,
+  resolveTimeZone,
+} from '../utils/timezone.js';
 
 function resolveCardMetadata(
   card: any,
@@ -64,9 +69,9 @@ export class TrelloAdapter implements SourceAdapter {
     if (!boards || boards.length === 0) return [];
 
     const items: UnifiedItem[] = [];
-    const targetDateStr = targetDate.toISOString().slice(0, 10);
-    const startOfToday = new Date(targetDate);
-    startOfToday.setHours(0, 0, 0, 0);
+    const timeZone = resolveTimeZone(config.timezone);
+    const targetDateStr = extractCalendarDateStr(targetDate);
+    const { startOfDay: startOfToday } = getDayBoundsInTimeZone(targetDateStr, timeZone);
 
     for (const board of boards) {
       const { board_id, lists } = board;
