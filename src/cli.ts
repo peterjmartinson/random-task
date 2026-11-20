@@ -5,6 +5,12 @@ import path from 'node:path';
 import { Command } from 'commander';
 import { loadConfig } from './config/config.loader.js';
 import { runPipeline } from './pipeline/index.js';
+import {
+  dateFromYmd,
+  getDateStringInTimeZone,
+  isValidTimeZone,
+  parseTargetDateInput,
+} from './utils/timezone.js';
 
 const program = new Command();
 
@@ -14,6 +20,7 @@ program
   .version('1.0.0')
   .option('-c, --config <path>', 'Path to config.json file', 'config.json')
   .option('-d, --date <YYYY-MM-DD>', 'Target date for agenda (defaults to today)')
+  .option('-z, --timezone <IANA>', 'IANA timezone (e.g. America/New_York)')
   .option('-o, --output-dir <path>', 'Override output directory')
   .option('-m, --mock', 'Use mock data adapters (offline mode)', false)
   .option('--dry-run', 'Print output JSON to stdout without writing to disk', false)
@@ -25,20 +32,30 @@ program
         config.output_directory = options.outputDir;
       }
 
-      let targetDate = new Date();
+      if (options.timezone) {
+        if (!isValidTimeZone(options.timezone)) {
+          console.error(`Error: Invalid timezone "${options.timezone}". Expected an IANA timezone like "America/New_York".`);
+          process.exit(1);
+        }
+        config.timezone = options.timezone;
+      }
+
+      let targetDate: Date;
       if (options.date) {
-        const dateStr = options.date.includes('T') ? options.date : `${options.date}T00:00:00`;
-        const parsedDate = new Date(dateStr);
-        if (isNaN(parsedDate.getTime())) {
+        const parsedDate = parseTargetDateInput(options.date);
+        if (!parsedDate) {
           console.error(`Error: Invalid date format "${options.date}". Expected YYYY-MM-DD.`);
           process.exit(1);
         }
         targetDate = parsedDate;
+      } else {
+        targetDate = dateFromYmd(getDateStringInTimeZone(new Date(), config.timezone));
       }
 
       const agendaOutput = await runPipeline({
         config,
         targetDate,
+        timezone: config.timezone,
         mock: options.mock,
       });
 

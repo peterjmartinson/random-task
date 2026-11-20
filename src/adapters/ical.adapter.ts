@@ -4,6 +4,13 @@ import { SourceAdapter } from './base.adapter.js';
 import { AppConfig } from '../config/config.schema.js';
 import { UnifiedItem } from '../models/unified.model.js';
 import { parseContacts } from '../utils/contact-parser.js';
+import {
+  addDaysToYmd,
+  extractCalendarDateStr,
+  formatProcessLocalYmd,
+  getDayBoundsInTimeZone,
+  resolveTimeZone,
+} from '../utils/timezone.js';
 
 function extractString(val: unknown): string {
   if (!val) return '';
@@ -36,11 +43,15 @@ export class ICalAdapter implements SourceAdapter {
       return [];
     }
 
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
+    const timeZone = resolveTimeZone(config.timezone);
+    const targetDateStr = extractCalendarDateStr(targetDate);
+    const { startOfDay, endOfDay } = getDayBoundsInTimeZone(targetDateStr, timeZone);
 
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // node-ical stores VALUE=DATE all-day events using process-local midnight;
+    // build matching process-local day bounds for expanding recurring date-only events.
+    const [targetYear, targetMonth, targetDay] = targetDateStr.split('-').map(Number);
+    const localDayStart = new Date(targetYear, targetMonth - 1, targetDay, 0, 0, 0, 0);
+    const localDayEnd = new Date(targetYear, targetMonth - 1, targetDay, 23, 59, 59, 999);
 
     const items: UnifiedItem[] = [];
 
@@ -67,17 +78,50 @@ export class ICalAdapter implements SourceAdapter {
 
           if (event.status === 'CANCELLED') continue;
 
+          const isDateOnly =
+            event.datetype === 'date' ||
+            Boolean((event.start as { dateOnly?: boolean } | undefined)?.dateOnly);
+
           // Handle recurring events
           if (event.rrule) {
+            const expandFrom = isDateOnly ? localDayStart : startOfDay;
+            const expandTo = isDateOnly ? localDayEnd : endOfDay;
+
             try {
               const instances = ical.expandRecurringEvent(event, {
-                from: startOfDay,
-                to: endOfDay,
+                from: expandFrom,
+                to: expandTo,
                 includeOverrides: true,
                 excludeExdates: true,
               });
 
               for (const inst of instances) {
+                const instAllDay = isDateOnly || inst.isFullDay;
+                let windowStart: string;
+                let windowEnd: string;
+
+                if (instAllDay) {
+                  const startYmd = formatProcessLocalYmd(inst.start);
+                  const rawEndYmd = inst.end
+                    ? formatProcessLocalYmd(inst.end)
+                    : addDaysToYmd(startYmd, 1);
+                  const endYmd = rawEndYmd > startYmd ? rawEndYmd : addDaysToYmd(startYmd, 1);
+                  if (!(startYmd <= targetDateStr && targetDateStr < endYmd)) {
+                    continue;
+                  }
+                  windowStart = startYmd;
+                  windowEnd = endYmd;
+                } else {
+                  const overlapsDay =
+                    (inst.end > startOfDay || inst.start.getTime() === startOfDay.getTime()) &&
+                    inst.start <= endOfDay;
+                  if (!overlapsDay) {
+                    continue;
+                  }
+                  windowStart = inst.start.toISOString();
+                  windowEnd = inst.end.toISOString();
+                }
+
                 const title = extractString(inst.summary) || 'Untitled Event';
                 const description = extractString(inst.event?.description);
                 const location = extractString(inst.event?.location);
@@ -92,9 +136,9 @@ export class ICalAdapter implements SourceAdapter {
                   title,
                   url: eventUrl,
                   timeWindow: {
-                    start: inst.start.toISOString(),
-                    end: inst.end.toISOString(),
-                    allDay: inst.isFullDay,
+                    start: windowStart,
+                    end: windowEnd,
+                    allDay: instAllDay,
                   },
                   priority: 'medium',
                   status: 'pending',
@@ -109,7 +153,7 @@ export class ICalAdapter implements SourceAdapter {
               }
             } catch {
               // Fallback to manual recurrence check if expansion fails
-              const occurrences = event.rrule.between(startOfDay, endOfDay, true);
+              const occurrences = event.rrule.between(expandFrom, expandTo, true);
               const durationMs = event.end && event.start
                 ? event.end.getTime() - event.start.getTime()
                 : 3600000;
@@ -121,7 +165,7 @@ export class ICalAdapter implements SourceAdapter {
                 }
 
                 const occStart = new Date(occDate);
-                if (event.start) {
+                if (event.start && !isDateOnly) {
                   occStart.setHours(
                     event.start.getHours(),
                     event.start.getMinutes(),
@@ -130,11 +174,34 @@ export class ICalAdapter implements SourceAdapter {
                   );
                 }
                 const occEnd = new Date(occStart.getTime() + durationMs);
+                const isAllDay = isDateOnly || durationMs >= 86400000;
+
+                let windowStart: string;
+                let windowEnd: string;
+                if (isDateOnly) {
+                  const startYmd = formatProcessLocalYmd(occStart);
+                  const rawEndYmd = formatProcessLocalYmd(occEnd);
+                  const endYmd = rawEndYmd > startYmd ? rawEndYmd : addDaysToYmd(startYmd, 1);
+                  if (!(startYmd <= targetDateStr && targetDateStr < endYmd)) {
+                    continue;
+                  }
+                  windowStart = startYmd;
+                  windowEnd = endYmd;
+                } else {
+                  const overlapsDay =
+                    (occEnd > startOfDay || occStart.getTime() === startOfDay.getTime()) &&
+                    occStart <= endOfDay;
+                  if (!overlapsDay) {
+                    continue;
+                  }
+                  windowStart = occStart.toISOString();
+                  windowEnd = occEnd.toISOString();
+                }
+
                 const title = extractString(event.summary) || 'Untitled Event';
                 const description = extractString(event.description);
                 const location = extractString(event.location);
                 const contacts = parseContacts(`${description} ${location}`);
-                const isAllDay = event.datetype === 'date' || durationMs >= 86400000;
 
                 items.push({
                   id: `ical-${event.uid}-${occIso}`,
@@ -143,8 +210,8 @@ export class ICalAdapter implements SourceAdapter {
                   title,
                   url: typeof event.url === 'string' ? event.url : undefined,
                   timeWindow: {
-                    start: occStart.toISOString(),
-                    end: occEnd.toISOString(),
+                    start: windowStart,
+                    end: windowEnd,
                     allDay: isAllDay,
                   },
                   priority: 'medium',
@@ -166,8 +233,46 @@ export class ICalAdapter implements SourceAdapter {
             const evtStart = new Date(event.start);
             const evtEnd = event.end ? new Date(event.end) : new Date(evtStart.getTime() + 3600000);
 
-            if (evtEnd > startOfDay && evtStart <= endOfDay) {
-              const isAllDay = event.datetype === 'date' || (evtEnd.getTime() - evtStart.getTime()) >= 86400000;
+            if (isDateOnly) {
+              const startYmd = formatProcessLocalYmd(evtStart);
+              const rawEndYmd = event.end
+                ? formatProcessLocalYmd(evtEnd)
+                : addDaysToYmd(startYmd, 1);
+              const endYmd = rawEndYmd > startYmd ? rawEndYmd : addDaysToYmd(startYmd, 1);
+
+              if (startYmd <= targetDateStr && targetDateStr < endYmd) {
+                const title = extractString(event.summary) || 'Untitled Event';
+                const description = extractString(event.description);
+                const location = extractString(event.location);
+                const contacts = parseContacts(`${description} ${location}`);
+
+                items.push({
+                  id: `ical-${event.uid || Math.random().toString(36).substring(2)}`,
+                  source: this.name,
+                  type: 'event',
+                  title,
+                  url: typeof event.url === 'string' ? event.url : undefined,
+                  timeWindow: {
+                    start: startYmd,
+                    end: endYmd,
+                    allDay: true,
+                  },
+                  priority: 'medium',
+                  status: 'pending',
+                  description: description || undefined,
+                  metadata: {
+                    calendar: calendarLabel,
+                    location: location || undefined,
+                    phone: contacts.phone,
+                    email: contacts.email,
+                  },
+                });
+              }
+            } else if (
+              (evtEnd > startOfDay || evtStart.getTime() === startOfDay.getTime()) &&
+              evtStart <= endOfDay
+            ) {
+              const isAllDay = (evtEnd.getTime() - evtStart.getTime()) >= 86400000;
               const title = extractString(event.summary) || 'Untitled Event';
               const description = extractString(event.description);
               const location = extractString(event.location);

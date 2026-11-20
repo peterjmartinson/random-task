@@ -3,6 +3,12 @@ import { SourceAdapter } from './base.adapter.js';
 import { AppConfig } from '../config/config.schema.js';
 import { UnifiedItem } from '../models/unified.model.js';
 import { parseContacts } from '../utils/contact-parser.js';
+import {
+  addDaysToYmd,
+  extractCalendarDateStr,
+  getDayBoundsInTimeZone,
+  resolveTimeZone,
+} from '../utils/timezone.js';
 
 async function resolveAccessToken(gcalConfig: AppConfig['google_calendar']): Promise<string | undefined> {
   if (gcalConfig?.access_token) {
@@ -41,11 +47,9 @@ export class GoogleCalendarAdapter implements SourceAdapter {
       return [];
     }
 
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const timeZone = resolveTimeZone(config.timezone);
+    const targetDateStr = extractCalendarDateStr(targetDate);
+    const { startOfDay, nextDayStart } = getDayBoundsInTimeZone(targetDateStr, timeZone);
 
     const items: UnifiedItem[] = [];
 
@@ -58,7 +62,8 @@ export class GoogleCalendarAdapter implements SourceAdapter {
         const headers: Record<string, string> = {};
         const params: Record<string, any> = {
           timeMin: startOfDay.toISOString(),
-          timeMax: endOfDay.toISOString(),
+          timeMax: nextDayStart.toISOString(),
+          timeZone,
           singleEvents: true,
           orderBy: 'startTime',
         };
@@ -78,6 +83,16 @@ export class GoogleCalendarAdapter implements SourceAdapter {
           const startStr = evt.start?.dateTime || evt.start?.date;
           const endStr = evt.end?.dateTime || evt.end?.date;
           const isAllDay = !evt.start?.dateTime;
+
+          // Guard against all-day events bleeding across timezone boundaries
+          if (isAllDay && typeof startStr === 'string') {
+            const startYmd = startStr.slice(0, 10);
+            const rawEndYmd = typeof endStr === 'string' ? endStr.slice(0, 10) : addDaysToYmd(startYmd, 1);
+            const endYmd = rawEndYmd > startYmd ? rawEndYmd : addDaysToYmd(startYmd, 1);
+            if (!(startYmd <= targetDateStr && targetDateStr < endYmd)) {
+              continue;
+            }
+          }
 
           const contacts = parseContacts(`${evt.description || ''} ${evt.location || ''}`);
 

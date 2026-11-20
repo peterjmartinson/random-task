@@ -2,7 +2,10 @@ export interface AgendaEventOutput {
   id: string;
   type: 'event';
   title: string;
-  time: string; // e.g. "10:00 AM - 10:45 AM"
+  time: string; // e.g. "10:00 AM - 10:45 AM" (formatted in metadata.timezone)
+  start?: string; // ISO 8601 start timestamp (or YYYY-MM-DD for all-day)
+  end?: string; // ISO 8601 end timestamp (or YYYY-MM-DD for all-day)
+  allDay?: boolean;
   url?: string;
   accessory?: string; // e.g. "Address: 104 Main St (15 min drive time. Leave by 02:15 PM)" or "Phone: (555) 012-3456"
 }
@@ -33,6 +36,7 @@ export interface AgendaSectionOutput {
 
 export interface AgendaOutputMetadata {
   generated_at: string;
+  timezone?: string;
   total_events?: number;
   total_tasks?: number;
 }
